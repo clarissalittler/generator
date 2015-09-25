@@ -33,7 +33,25 @@ program
   .option('-c, --css <engine>', 'add stylesheet <engine> support (less|stylus|compass|sass) (defaults to plain css)')
   .option('    --git', 'add .gitignore')
   .option('-f, --force', 'force on non-empty directory')
+  .option('-b, --beginner', 'beginner mode')
   .parse(process.argv);
+
+// TO REMOVE LATER:
+// We're going to add a 'beginner' mode
+// Which is going to create a slightly simpler directory structure
+// And add in a bunch of explanatory comments about what lines are doing what
+// with links to express documentation and all of that. 
+// Now, what should be removed?
+//
+// Let's remove the "users" route file. Let's also, perhaps, remove the production error handler
+// and possibly the cookie parser for first examples? That might be too aggressive though.
+// I think it's definitely reasonable to remove the favicon section, the logger
+// 
+// Well, one issue here is should we have just two different files or just have some way of
+// marking the sections that should be included in beginner vs. everything else
+//
+// it'd be far less ugly to just have seperate files, it'd also involve more maintenance
+// not that much more all things considered, since this is a fairly small program to begin with
 
 if (!exit.exited) {
   main();
@@ -98,11 +116,11 @@ function createApplication(app_name, path) {
   }
 
   // JavaScript
-  var app = loadTemplate('js/app.js');
+  var app = (! program.beginner) ? loadTemplate('js/app.js') : loadTemplate('js/appBeginner.js');
   var www = loadTemplate('js/www');
-  var index = loadTemplate('js/routes/index.js');
+  var index = (! program.beginner) ? loadTemplate('js/routes/index.js') : loadTemplate('js/routes/indexBeginner.js');
   var users = loadTemplate('js/routes/users.js');
-
+ 
   // CSS
   var css = loadTemplate('css/style.css');
   var less = loadTemplate('css/style.less');
@@ -114,29 +132,32 @@ function createApplication(app_name, path) {
     mkdir(path + '/public');
     mkdir(path + '/public/javascripts');
     mkdir(path + '/public/images');
-    mkdir(path + '/public/stylesheets', function(){
-      switch (program.css) {
-        case 'less':
-          write(path + '/public/stylesheets/style.less', less);
-          break;
-        case 'stylus':
-          write(path + '/public/stylesheets/style.styl', stylus);
-          break;
-        case 'compass':
-          write(path + '/public/stylesheets/style.scss', compass);
-          break;
-        case 'sass':
-          write(path + '/public/stylesheets/style.sass', sass);
-          break;
-        default:
-          write(path + '/public/stylesheets/style.css', css);
-      }
-      complete();
-    });
-
+    if( ! program.beginner){  
+	mkdir(path + '/public/stylesheets', function(){
+	    switch (program.css) {
+            case 'less':
+		write(path + '/public/stylesheets/style.less', less);
+		break;
+            case 'stylus':
+		write(path + '/public/stylesheets/style.styl', stylus);
+		break;
+            case 'compass':
+		write(path + '/public/stylesheets/style.scss', compass);
+		break;
+            case 'sass':
+		write(path + '/public/stylesheets/style.sass', sass);
+		break;
+            default:
+		write(path + '/public/stylesheets/style.css', css);
+	    }
+	    complete();
+	});
+    }
     mkdir(path + '/routes', function(){
       write(path + '/routes/index.js', index);
-      write(path + '/routes/users.js', users);
+	if(! program.beginner) {
+	    write(path + '/routes/users.js', users);
+	}
       complete();
     });
 
@@ -163,25 +184,25 @@ function createApplication(app_name, path) {
       }
       complete();
     });
-
-    // CSS Engine support
-    switch (program.css) {
-      case 'less':
-        app = app.replace('{css}', eol + 'app.use(require(\'less-middleware\')(path.join(__dirname, \'public\')));');
-        break;
-      case 'stylus':
-        app = app.replace('{css}', eol + 'app.use(require(\'stylus\').middleware(path.join(__dirname, \'public\')));');
-        break;
-      case 'compass':
-        app = app.replace('{css}', eol + 'app.use(require(\'node-compass\')({mode: \'expanded\'}));');
-        break;
-      case 'sass':
-        app = app.replace('{css}', eol + 'app.use(require(\'node-sass-middleware\')({\n  src: path.join(__dirname, \'public\'),\n  dest: path.join(__dirname, \'public\'),\n  indentedSyntax: true,\n  sourceMap: true\n}));');
-        break;
-      default:
-        app = app.replace('{css}', '');
-    }
-
+      if(! program.beginner) {
+	  // CSS Engine support
+	  switch (program.css) {
+	  case 'less':
+              app = app.replace('{css}', eol + 'app.use(require(\'less-middleware\')(path.join(__dirname, \'public\')));');
+              break;
+	  case 'stylus':
+              app = app.replace('{css}', eol + 'app.use(require(\'stylus\').middleware(path.join(__dirname, \'public\')));');
+              break;
+	  case 'compass':
+              app = app.replace('{css}', eol + 'app.use(require(\'node-compass\')({mode: \'expanded\'}));');
+              break;
+	  case 'sass':
+              app = app.replace('{css}', eol + 'app.use(require(\'node-sass-middleware\')({\n  src: path.join(__dirname, \'public\'),\n  dest: path.join(__dirname, \'public\'),\n  indentedSyntax: true,\n  sourceMap: true\n}));');
+              break;
+	  default:
+              app = app.replace('{css}', '');
+	  }
+      }
     // Template support
     app = app.replace('{views}', program.template);
 
